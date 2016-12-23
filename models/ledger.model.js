@@ -4,10 +4,13 @@ var restful = require('node-restful'),
 
 // Define our schema
 var schema = new mongoose.Schema({
-    date: {type: Date, default: Date.now()},
+    date: {type: Date, default: Date.now},
     description: String,
+    category: String,
+    checkNo: String,
     type: String,
-    amount: Number
+    amount: Number,
+    balanceAsOfThisEntry: Number
 });
 
 // Return ledger model
