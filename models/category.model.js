@@ -4,7 +4,7 @@ var restful = require('node-restful'),
 
 // Define our schema
 var schema = new mongoose.Schema({
-    name: String
+    name: {type: String, lowercase: true, unique: true}
 });
 
 // Return category model

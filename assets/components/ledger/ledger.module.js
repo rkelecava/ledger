@@ -1,4 +1,4 @@
-var app = angular.module('ledger', ['ui.bootstrap', 'xeditable']);
+var app = angular.module('ledger', ['ui.router', 'ui.bootstrap', 'xeditable']);
 
 // Bootstrap theme for x-editable
 app.run(function(editableOptions) {

@@ -102,6 +102,28 @@ router.put('/ledger/:entry', function (req, res, next) {
     });
 });
 
+// Update categories
+router.post('/ledger/updateCategories', function (req, res, next) {
+    Ledger.find({category: req.body.name}).exec(function (err, entries) {
+        if (err) { return next(err); }
+        entries.forEach(function(element) {
+            element.category = req.body.newName;
+            element.save(function (err, data) {
+                if (err) { return next(err); }
+            });
+        }, this);
+        res.json(entries);
+    });
+});
+
+// Get totals
+router.post('/ledger/totals', function (req, res, next) {
+    Ledger.find({category: req.body.name, date: {$gte: req.body.start}, date: {$lte: req.body.end}}).exec(function (err, entries) {
+        if (err) { return next(err); }
+        res.json(entries);
+    });
+});
+
 
 ///////////////////////
 /*
@@ -159,6 +181,19 @@ router.delete('/category/:category', function (req, res, next) {
             if (err) { return next(err); }
             res.json(categories);
         });
+    });
+});
+
+// Check if category already exists
+router.post('/category/exists', function (req, res, next) {
+    Category.findOne({name: req.body.name}).exec(function (err, element) {
+        if (element) { res.json({exists: true}); } else { res.json({exists: false}); }
+    });
+});
+
+router.post('/category/findById', function (req, res, next) {
+    Category.findById(req.body._id).exec(function (err, element) {
+        if (element) { res.json(element); } else { res.status(400).json({message: 'Can\'t find that category'}); }
     });
 });
 

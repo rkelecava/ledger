@@ -1,0 +1,22 @@
+            <div class="page-header">
+                <h2>{{lastYear | date:'MM/dd/yyyy'}} to {{today | date:'MM/dd/yyyy'}}</h2>
+            </div>
+            <div class="row" style="margin-top: 30px;">
+                <div class="col-md-3" ng-repeat="category in completeCategories | orderBy: 'name'">
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">{{category.name}}</h3>
+                        </div>
+                        <div class="panel-body">
+                            <strong>Total: {{getTotal(category.transactions) | currency}}</strong><br /><br />
+                            <strong>Avg: {{getAvg(category.transactions) || 0 | currency}}</strong>
+                            <div class="page-header">
+                                <h4>Transactions</h4>
+                                <ul>
+                                    <li ng-repeat="transaction in category.transactions | orderBy:'-date'">{{transaction.amount | currency}}, <i>{{transaction.date | date:'MM/dd/yyyy'}}</i></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
