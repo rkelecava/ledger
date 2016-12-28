@@ -7,6 +7,11 @@ app.config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $u
             templateUrl: '/components/ledger/html/ledger.main.html',
             controller: 'MainCtrl'
         })
+        .state('savings', {
+            url: '/savings',
+            templateUrl: '/components/ledger/html/ledger.savings.html',
+            controller: 'SavingsCtrl'
+        })        
         .state('categories', {
             url: '/categories',
             templateUrl: '/components/ledger/html/ledger.categories.html',

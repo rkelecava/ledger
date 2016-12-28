@@ -1,3 +1,4 @@
+// Checking service
 app.factory('LEDGER', ['$http', function ($http) {
     var o = {};
 
@@ -39,7 +40,67 @@ app.factory('LEDGER', ['$http', function ($http) {
     return o;
 }]);
 
+// Savings service
+app.factory('SAVINGS', ['$http', function ($http) {
+    var o = {};
 
+    o.GETALL = function () {
+        return $http.get('/api/savings');
+    };
+
+    o.GETALLDATERANGE = function (start, end) {
+        var payload = {};
+        payload.start = start;
+        payload.end = end;
+        return $http.post('/api/savings/dateRange', payload);
+    };
+
+    o.ADD = function (entry) {
+        var payload = {};
+        payload.description = entry.description;
+        payload.category = entry.category;
+        if (entry.category === 'transfer to savings') {
+            payload.type = 'deposit';
+        }
+        if (entry.category === 'transfer to checking') {
+            payload.type = 'withdrawl';
+        }
+        payload.checkingId = entry.checkingId;
+        payload.amount = entry.amount;
+        return $http.post('/api/savings', payload);
+    };
+
+    o.ADDINTEREST = function (entry) {
+        var payload = {};
+        payload.description = 'Interest paid';
+        payload.category = 'interest (savings)';
+        payload.type = 'deposit';
+        payload.amount = entry.amount;
+        return $http.post('/api/savings', payload);
+    };
+
+    o.DELETE = function (entry) {
+        return $http.delete('/api/savings/' + entry._id);
+    };
+
+    o.DELETE2 = function (entry) {
+        var payload = {};
+        payload.id = entry._id;
+        payload.amount = entry.amount;
+        payload.date = entry.date;
+        if (entry.type === 'deposit') {
+            payload.type = 'withdrawl';
+        }
+        if (entry.type === 'withdrawl') {
+            payload.type = 'deposit';
+        }
+        return $http.post('/api/savings/delete2', payload);
+    };
+
+    return o;
+}]);
+
+// Category service
 app.factory('CATEGORY', ['$http', function ($http) {
     var o = {};
 

@@ -2,6 +2,7 @@
 var express = require('express'),
     router = express.Router()
     Ledger = require('../../models/ledger.model'),
+    Savings = require('../../models/savings.model'),
     Category = require('../../models/category.model');
 
 // Get all ledger entries
@@ -198,6 +199,144 @@ router.post('/category/findById', function (req, res, next) {
 });
 
 
+//////////////////////////
+/*
+    Savings Routes
+                    *////
+/////////////////////////
+// Get all savings entries
+router.get('/savings', function (req, res, next) {
+    Savings.find(function (err, entries) {
+        if (err) { return next(err); }
+        res.json(entries);
+    });
+});
+
+// Get all savings date range
+router.post('/savings/dateRange', function (req, res, next) {
+   Savings.find({date: {$gte: req.body.start}, date: {$lte: req.body.end}}).exec(function (err, entries) {
+       if (err) { next(err); }
+       res.json(entries);
+   });
+});
+
+// Add a new entry to the savings ledger
+router.post('/savings', function (req, res, next) {
+    var balance = 0;
+    Savings.find(function (err, entries) {
+        entries.forEach(function(element) {
+            if (element.type === 'deposit') {
+                balance += element.amount;
+            } else {
+                balance -= element.amount;
+            }
+        }, this);
+        var savings = new Savings(req.body);
+        if (req.body.type === 'deposit') {
+            savings.balanceAsOfThisEntry = balance + savings.amount;
+        }
+        if (req.body.type === 'withdrawl') {
+            savings.balanceAsOfThisEntry = balance - savings.amount;
+        }
+
+        savings.save(function (err, entry) {
+            if (err) { return next(err); }
+            res.json(entry);
+        });
+    });
+});
+
+// Delete 2
+router.post('/savings/delete2', function (req, res, next) {
+    var type = req.body.type;
+    var amount = req.body.amount;
+    Savings.findOne({checkingId: req.body.id}).exec(function (err, entry) {
+        if (err) { return next(err); }
+        if (!entry) { return next(new Error('No entry exists')); }
+        var date = entry.date;
+        entry.remove(function (err) {
+            if (err) { return next(err); }
+            Savings.find().sort({date: -1}).exec(function (err, entries) {
+                if (err) { return next(err); }
+                entries.forEach(function(element) {
+                    if (element.date >= date) {
+                        if (type === 'deposit') {
+                            element.balanceAsOfThisEntry -= amount;
+                        } else {
+                            element.balanceAsOfThisEntry += amount;
+                        }
+                        element.save(function (err) {
+                            if (err) { return next(err); }
+                        });
+                    }
+                }, this);
+                res.json(entries);
+            });
+        });
+    });
+});
+
+// Returns the current running savings balance
+router.get('/savings/balance', function (req, res, next) {
+    var balance = 0;
+    Savings.find(function (err, entries) {
+        entries.forEach(function(element) {
+            if (element.type === 'deposit') {
+                balance += element.amount;
+            } else {
+                balance -= element.amount;
+            }
+        }, this);
+
+        res.json({balance: balance});
+    });
+});
+
+// Define entry parameter
+router.param('savings_entry', function (req, res, next, id) {
+    Savings.findById(id).exec(function (err, entry) {
+        if (err) { return next(err); }
+        if (!entry) { return next(new Error('can\'t find savings entry')); }
+        req.entry = entry;
+        return next();
+    });
+});
+
+// Delete an entry from the savings ledger
+router.delete('/savings/:savings_entry', function (req, res, next) {
+    var amount = req.entry.amount;
+    var type = req.entry.type;
+    var date = req.entry.date;
+    req.entry.remove(function (err) {
+        if (err) { return next(err); }
+        Savings.find().sort({date: -1}).exec(function (err, entries) {
+            if (err) { return next(err); }
+            entries.forEach(function(element) {
+                if (element.date >= date) {
+                    if (type === 'deposit') {
+                        element.balanceAsOfThisEntry -= amount;
+                    } else {
+                        element.balanceAsOfThisEntry += amount;
+                    }
+                    element.save(function (err) {
+                        if (err) { return next(err); }
+                    });
+                }
+            }, this);
+            res.json(entries);
+        });
+    });
+});
+
+// Update an entry in the savings ledger
+router.put('/savings/:savings_entry', function (req, res, next) {
+    var diff = 0;
+    req.entry.description = req.body.description;
+    req.entry.category = req.body.category;
+    req.entry.save(function (err, entry) {
+        res.json(entry);
+    });
+});
 
 
 // Export api to router

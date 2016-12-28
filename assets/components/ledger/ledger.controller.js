@@ -1,4 +1,5 @@
-app.controller('MainCtrl', ['$scope', '$rootScope', 'LEDGER', 'CATEGORY', function ($scope, $rootScope, LEDGER, CATEGORY) {
+// Checking Controller
+app.controller('MainCtrl', ['$scope', '$rootScope', 'LEDGER', 'CATEGORY', 'SAVINGS', function ($scope, $rootScope, LEDGER, CATEGORY, SAVINGS) {
 
     // Type options
     $scope.typeOptions = ['type', 'deposit', 'withdrawl'];
@@ -34,7 +35,15 @@ app.controller('MainCtrl', ['$scope', '$rootScope', 'LEDGER', 'CATEGORY', functi
         LEDGER.DELETE(entry).then(function successCallback(res) {
             LEDGER.CURRENTBALANCE().then(function successCallback(res) {
                 $rootScope.currentBalance = res.data.balance;
-                init();
+                if (entry.category === 'transfer to savings' || entry.category === 'transfer to checking') {
+                    SAVINGS.DELETE2(entry).then(function (successCallback) {
+                        init();
+                    }, function (errorCallback) {
+                        console.log(res.data.status);
+                    });
+                } else {
+                    init();
+                }
             }, function errorCallback(res) {
                 console.log(res.data.status);
             });
@@ -54,9 +63,24 @@ app.controller('MainCtrl', ['$scope', '$rootScope', 'LEDGER', 'CATEGORY', functi
             return;
         }
         LEDGER.ADD($scope.newEntry).then(function successCallback(res) {
+            $scope.newEntry.checkingId = res.data._id;
             LEDGER.CURRENTBALANCE().then(function successCallback(res) {
                 $rootScope.currentBalance = res.data.balance;
-                init();
+                if ($scope.newEntry.category === 'transfer to savings') {
+                    SAVINGS.ADD($scope.newEntry).then(function (successCallback) {
+                        init();
+                    }, function (errorCallback) {
+                        console.log(res.data.status);
+                    });
+                } else if ($scope.newEntry.category === 'transfer to checking') {
+                    SAVINGS.ADD($scope.newEntry).then(function (successCallback) {
+                        init();
+                    }, function (errorCallback) {
+                        console.log(res.data.status);
+                    });
+                } else {
+                    init();
+                }
             }, function errorCallback(res) {
                 console.log(res.data.status);
             });
@@ -87,6 +111,8 @@ app.controller('MainCtrl', ['$scope', '$rootScope', 'LEDGER', 'CATEGORY', functi
                 $scope.categoryOptions.push(element.name);
             }, this);
             $scope.categoryOptions.push('category');
+            $scope.categoryOptions.push('transfer to savings');
+            $scope.categoryOptions.push('transfer to checking');
             // Sort category options
             $scope.categoryOptions = $scope.categoryOptions.sort();
         }, function errorCallback(res) {
@@ -105,6 +131,8 @@ app.controller('MainCtrl', ['$scope', '$rootScope', 'LEDGER', 'CATEGORY', functi
     init();
 }]);
 
+
+// Jumbotron Controller
 app.controller('jumboCtrl', ['$scope', '$rootScope', 'LEDGER', function ($scope, $rootScope, LEDGER) {
     // Check if dollar amount is positive or negative
     $scope.positiveBalance = function (amount) {
@@ -127,19 +155,23 @@ app.controller('jumboCtrl', ['$scope', '$rootScope', 'LEDGER', function ($scope,
     init();
 }]);
 
+
+// Tabs Controller
 app.controller('tabsCtrl', ['$scope', '$state', '$window', function ($scope, $state, $window) {
     $scope.changeState = function (state) {
         $state.go(state);
     };
 
     $scope.tabs = [
-        { title:'Main', state:'main', active: true},
+        { title:'Checking', state:'main'},
+        { title:'Savings', state:'savings'},
         { title:'Categories', state:'categories'},
         { title:'Analysis', state:'analysis'}
     ];
 
 }]);
 
+// Category Controller
 app.controller('CategoryCtrl', ['$scope', 'CATEGORY', 'LEDGER', function ($scope, CATEGORY, LEDGER) {
     // Update category
     $scope.updateCategory = function (category) {
@@ -217,7 +249,9 @@ app.controller('CategoryCtrl', ['$scope', 'CATEGORY', 'LEDGER', function ($scope
     init();
 }]);
 
-app.controller('AnalysisCtrl', ['$scope', 'CATEGORY', 'LEDGER', function ($scope, CATEGORY, LEDGER) {
+// Analysis Controller
+app.controller('AnalysisCtrl', ['$scope', 'CATEGORY', 'LEDGER', 'SAVINGS', function ($scope, CATEGORY, LEDGER, SAVINGS) {
+
     $scope.getTotal = function (transactions) {
         var total = 0;
         transactions.forEach(function(element) {
@@ -227,13 +261,32 @@ app.controller('AnalysisCtrl', ['$scope', 'CATEGORY', 'LEDGER', function ($scope
         return total;
     };
 
+    $scope.getSavingsTotal = function (transactions) {
+        var total = 0;
+
+        if (transactions) {
+            transactions.forEach(function(element) {
+                if (element.type === 'deposit') {
+                    total += element.amount;
+                } else {
+                    total -= element.amount;
+                }
+            }, this);
+        }
+
+        return total;
+    };
+
     $scope.getAvg = function (transactions) {
-        var total = $scope.getTotal(transactions);
-        var length = transactions.length;
-        var avg = total / length;
+        if (transactions) {
+            var total = $scope.getTotal(transactions);
+            var length = transactions.length;
+            var avg = total / length;
+        }
 
         return avg;
     };
+
 
     function init() {
         CATEGORY.GETALL().then(function successCallback(res) {
@@ -242,11 +295,25 @@ app.controller('AnalysisCtrl', ['$scope', 'CATEGORY', 'LEDGER', function ($scope
             $scope.today = new Date();
             $scope.lastYear = new Date();
             $scope.lastYear.setDate($scope.today.getDate() - 365);
+            SAVINGS.GETALLDATERANGE($scope.lastYear, $scope.today).then(function successCallback(res) {
+                $scope.savings = res.data;
+            }, function errorCallback(res) {
+                console.log(res.data.status);
+            });
             $scope.categories.forEach(function(element) {
                 var cat = element;
                 LEDGER.GETTOTALS($scope.lastYear, $scope.today, element.name).then(function successCallback(res) {
                     cat.transactions = res.data;
                     $scope.completeCategories.push(cat);
+                    $scope.numberOfRows = $scope.completeCategories.length / 4;
+                    $scope.numberOfRows = Math.ceil($scope.numberOfRows);
+                    $scope.numberOfRows--;
+                    $scope.rowsArray = [];
+                    while ($scope.numberOfRows > -1) {
+                        $scope.rowsArray.push($scope.numberOfRows);
+                        $scope.numberOfRows--;
+                    }
+                    $scope.rowsArray.sort();
                 }, function errorCallback(res) {
                     console.log(res.data.status);
                 });
@@ -254,6 +321,62 @@ app.controller('AnalysisCtrl', ['$scope', 'CATEGORY', 'LEDGER', function ($scope
         }, function errorCallback(res) {
             console.log(res.data.status);
         });
+    }
+
+    init();
+}]);
+
+// Savings Controller
+app.controller('SavingsCtrl', ['$scope', 'SAVINGS', function ($scope, SAVINGS) {
+
+    // Alerts
+    $scope.alerts = [];
+
+    $scope.closeAlert = function(index) {
+        $scope.alerts.splice(index, 1);
+    };
+
+    // Check if dollar amount is positive or negative
+    $scope.positiveBalance = function (amount) {
+        if (amount <= 0) {
+            return false;
+        } else {
+            return true;
+        }
+    };
+
+    // Add interest to savings
+    $scope.addInterest = function () {
+        SAVINGS.ADDINTEREST($scope.newEntry).then(function successCallback(res) {
+            init();
+        }, function (errorCallback) {
+            console.log(res.data.status);
+        });
+    };
+
+    // Function to delete a savings entry
+    $scope.delete = function (entry) {
+        SAVINGS.DELETE(entry).then(function successCallback(res) {
+            init();
+        }, function errorCallback(res) {
+            console.log(res.data.status);
+        });
+    };
+
+    // Run on page load
+    function init() {
+        // Get all savings entries
+        SAVINGS.GETALL().then(function successCallback(res) {
+            $scope.savings = res.data;
+            if (res.data.length > 0) {
+                $scope.entriesExist = true;
+            } else {
+                $scope.entriesExist = false;
+            }
+        }, function errorCallback(res) {
+            console.log(res.data.status);
+        });
+       
     }
 
     init();
