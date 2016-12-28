@@ -266,10 +266,12 @@ app.controller('AnalysisCtrl', ['$scope', 'CATEGORY', 'LEDGER', 'SAVINGS', funct
 
         if (transactions) {
             transactions.forEach(function(element) {
-                if (element.type === 'deposit') {
-                    total += element.amount;
-                } else {
-                    total -= element.amount;
+                if (element.category !== 'initialize') {
+                    if (element.type === 'deposit') {
+                        total += element.amount;
+                    } else {
+                        total -= element.amount;
+                    }
                 }
             }, this);
         }
@@ -344,6 +346,14 @@ app.controller('SavingsCtrl', ['$scope', 'SAVINGS', function ($scope, SAVINGS) {
             return true;
         }
     };
+
+    $scope.initialize = function () {
+        SAVINGS.INITIALIZE($scope.initialize).then(function successCallback(res) {
+            init();
+        }, function (errorCallback) {
+            console.log(res.data.status);
+        });
+    }
 
     // Add interest to savings
     $scope.addInterest = function () {

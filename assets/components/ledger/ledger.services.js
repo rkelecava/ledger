@@ -97,6 +97,15 @@ app.factory('SAVINGS', ['$http', function ($http) {
         return $http.post('/api/savings/delete2', payload);
     };
 
+    o.INITIALIZE = function (entry) {
+        var payload = {};
+        payload.description = 'Set start amount';
+        payload.category = 'initialize';
+        payload.amount = entry.amount;
+        payload.type = 'deposit';
+        return $http.post('/api/savings', payload);
+    };
+
     return o;
 }]);
 
